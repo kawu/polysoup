@@ -1,0 +1,12 @@
+Name:               polysoup
+Version:            0.0.0
+Synopsis:           Online XML parsing with polyparse and tagsoup
+License:            BSD3
+License-file:       LICENSE
+Author:             Jakub Waszczuk
+Maintainer:         waszczuk.kuba@gmail.com
+Build-type:         Simple
+Exposed-modules:    Text.XML.PolySoup
+Build-Depends:      base
+		  , tagsoup
+		  , polyparse
