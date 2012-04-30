@@ -3,35 +3,43 @@
 module Text.XML.PolySoup
 ( XmlParser
 , TagPred
-, emptyPred
+, true
 , isTagOpen
 , isTagClose
 , isTagOpenName
+, isTagText
+, tagOpenName
+, tagText
 , tag
 , hasAttr
 , getAttr
 , many_
 , satisfyPred
 , ignoreAny
-, ignoreAnyM
 , ignoreText
-, ignoreTextM
 , ignoreTag
-, ignoreTagM
+, ignoreAnyM
+, text
 , join
 , joinR
 , joinL
+, (</>)
 , (/>)
+, (</)
 , (//>)
-, (/@)
-, (//@)
-, (/!)
-, (//!)
-, mkGenP
-, mkListP
-, mkFirstP
-, mkLastP
-, mkP
+, (<#>)
+, (#>)
+, (##>)
+-- , (/@)
+-- , (//@)
+-- , (/!)
+-- , (//!)
+-- , mkGenP
+-- , mkListP
+-- , mkFirstP
+-- , mkLastP
+-- , mkP
+, parseTags
 , parseXML
 , module Text.ParserCombinators.Poly.Lazy
 ) where
@@ -41,7 +49,7 @@ import Data.Monoid
 import Control.Applicative
 import Data.Char (isSpace)
 import Control.Monad (forM_)
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (catMaybes, isJust, fromJust)
 import qualified Text.HTML.TagSoup as Tag
 import Text.StringLike
 import Text.ParserCombinators.Poly.Lazy
@@ -67,8 +75,8 @@ fromBool :: Bool -> Maybe ()
 fromBool True  = Just ()
 fromBool False = Nothing
 
-emptyPred :: TagPred s ()
-emptyPred = TagPred $ const $ Just ()
+true :: TagPred s ()
+true = pure ()
 
 isTagOpen :: TagPred s ()
 isTagOpen = TagPred (fromBool . Tag.isTagOpen)
@@ -78,6 +86,13 @@ isTagClose = TagPred (fromBool . Tag.isTagClose)
 
 isTagOpenName :: Eq s => s -> TagPred s ()
 isTagOpenName nm = TagPred (fromBool . Tag.isTagOpenName nm)
+
+tagOpenName :: TagPred s s
+tagOpenName =
+    isTagOpen *> TagPred getIt
+  where
+    getIt (Tag.TagOpen name _) = Just name
+    getIt _ = Nothing
 
 -- | Short synonym for isTagOpenName.
 tag :: Eq s => s -> TagPred s ()
@@ -89,12 +104,8 @@ isTagCloseName nm = TagPred (fromBool . Tag.isTagCloseName nm)
 isTagText :: TagPred s ()
 isTagText = TagPred (fromBool . Tag.isTagText)
 
-tagOpenName :: TagPred s s
-tagOpenName =
-    isTagOpen *> TagPred getIt
-  where
-    getIt (Tag.TagOpen name _) = Just name
-    getIt _ = Nothing
+tagText :: TagPred s s
+tagText = TagPred Tag.maybeTagText 
 
 hasAttr :: (Show s, Eq s, StringLike s) => s -> s -> TagPred s ()
 hasAttr name x =
@@ -119,9 +130,6 @@ getAttr name =
 -- and TagParser types using newtype?
 type XmlParser s a = Parser (Tag.Tag s) a
 type TagParser s a = Parser (Tag.Tag s) a
-
-ignoreM :: (Applicative f, Monoid m) => f a -> f m
-ignoreM f = const mempty <$> f
 
 many_ :: Alternative f => f a -> f ()
 many_ v = many_v
@@ -148,15 +156,12 @@ ignoreTag = do
     name <- satisfyPred tagOpenName
     name `seq` many_ ignoreAny *> satisfyPred (isTagCloseName name)
 
--- | Versions with monoid result type. 
-ignoreTextM :: Monoid m => XmlParser s m
-ignoreTextM = ignoreM $ ignoreText
-
-ignoreTagM :: (Eq s, Monoid m) => XmlParser s m
-ignoreTagM = ignoreM $ ignoreTag
-
+-- | Version with monoid result type. 
 ignoreAnyM :: (Eq s, Monoid m) => XmlParser s m
-ignoreAnyM = ignoreM $ ignoreAny
+ignoreAnyM = const mempty <$> ignoreAny
+
+text :: Eq s => XmlParser s s
+text = satisfyPred tagText
 
 join :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, b)
 join p q = do
@@ -166,64 +171,107 @@ join p q = do
 joinR :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s b
 joinR p q = snd <$> join p q
 
--- joinR :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s b
--- joinR p q = satisfyPred isTagOpen *> q <* satisfyPred isTagClose
-
 joinL :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s a
 joinL p q = fst <$> join p q
 
-(/>) :: (Eq s, Monoid m) => TagPred s a -> XmlParser s m -> XmlParser s m
-(/>) p q = mconcat <$> joinR p (many $ q <|> ignoreAnyM)
+(</>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, [b])
+(</>) p q =
+    join p (catMaybes <$> many qMaybe)
+  where
+    qMaybe = Just <$> q
+         <|> const Nothing <$> ignoreAny
+infixr 2 </>
+
+(/>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s [b]
+(/>) p q = snd <$> (p </> q) -- joinR p (many $ q <|> ignoreAnyM)
 infixr 2 />
 
-(//>) :: (Eq s, Monoid m) => TagPred s a -> TagParser s m -> TagParser s m
-(//>) p q = mconcat <$> joinR p (many $ q <|> (emptyPred //> q) <|> ignoreAnyM)
+(</) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s a
+(</) p q = fst <$> (p </> q) -- joinL p (many_ $ q <|> ignoreAnyM)
+infixr 2 </
+
+(//>) :: Eq s => TagPred s a -> TagParser s b -> TagParser s [b]
+(//>) p q =
+    concat <$> joinR p (many qList)
+  where
+    qList = pure <$> q
+        <|> (true //> q)
+        <|> ignoreAnyM
 infixr 2 //>
 
-mkGenP :: (Eq s, Monoid m) => (a -> m) -> TagPred s a -> TagParser s m
-mkGenP f p = f <$> p `joinL` many_ ignoreAny
+-- | Combinators with results concatenation.
+(<#>) :: (Eq s, Monoid m) => TagPred s a -> XmlParser s m -> XmlParser s (a, m)
+(<#>) p q =
+    let mc (x, xs) = (x, mconcat xs)
+    in  mc <$> (p </> q)
+infixr 2 <#>
 
-mkListP :: Eq s => TagPred s a -> TagParser s [a]
-mkListP  = mkGenP (:[])
+(#>) :: (Eq s, Monoid m) => TagPred s a -> XmlParser s m -> XmlParser s m
+(#>) p q = mconcat <$> (p /> q)
+infixr 2 #>
 
-(/@) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s [b]
-(/@) p q = p /> mkListP q
-infixr 2 /@
+(##>) :: (Eq s, Monoid m) => TagPred s a -> TagParser s m -> TagParser s m
+(##>) p q = mconcat <$> (p //> q)
+infixr 2 ##>
 
-(//@) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s [b]
-(//@) p q = p //> mkListP q
-infixr 2 //@
-
-mkFirstP :: Eq s => TagPred s a -> TagParser s (First a)
-mkFirstP = mkGenP (First . Just)
-
-(/!) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s (First b)
-(/!) p q = p /> mkFirstP q
-infixr 2 /!
-
-(//!) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s (First b)
-(//!) p q = p //> mkFirstP q
-infixr 2 //!
-
--- | Using this function may cause memory leak.  Consider using
--- last <$> ... mkListP ... instead.
-mkLastP :: Eq s => TagPred s a -> TagParser s (Last a)
-mkLastP = mkGenP (Last . Just)
-
--- | A shortcut for mkListP.
-mkP :: Eq s => TagPred s a -> TagParser s [a]
-mkP = mkListP
+-- mkGenP :: (Eq s, Monoid m) => (a -> m) -> TagPred s a -> TagParser s m
+-- mkGenP f p = f <$> p `joinL` many_ ignoreAny
+-- 
+-- mkListP :: Eq s => TagPred s a -> TagParser s [a]
+-- mkListP  = mkGenP (:[])
+-- 
+-- | TODO: write "tag "..." /> tagName </ many_ ignoreAny"
+-- | or          "tag "..." /> tagName </ ignore"
+-- instead of    "tag "..." /@ tagName" ?
+-- (/@) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s [b]
+-- (/@) p q = p /> mkListP q
+-- infixr 2 /@
+-- 
+-- (//@) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s [b]
+-- (//@) p q = p //> mkListP q
+-- infixr 2 //@
+-- 
+-- mkFirstP :: Eq s => TagPred s a -> TagParser s (First a)
+-- mkFirstP = mkGenP (First . Just)
+-- 
+-- (/!) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s (First b)
+-- (/!) p q = p /> mkFirstP q
+-- infixr 2 /!
+-- 
+-- (//!) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s (First b)
+-- (//!) p q = p //> mkFirstP q
+-- infixr 2 //!
+-- 
+-- -- | Using this function may cause memory leak.  Consider using
+-- -- last <$> ... mkListP ... instead.
+-- mkLastP :: Eq s => TagPred s a -> TagParser s (Last a)
+-- mkLastP = mkGenP (Last . Just)
+-- 
+-- -- | A shortcut for mkListP.
+-- mkP :: Eq s => TagPred s a -> TagParser s [a]
+-- mkP = mkListP
 
 trim :: String -> String
 trim = f . f where f = reverse . dropWhile isSpace
 
 relevant :: StringLike s => Tag.Tag s -> Bool
+relevant (Tag.TagOpen name _)
+    | name == fromString "?xml" = False
+    | otherwise = True
+relevant (Tag.TagClose _) = True
 relevant (Tag.TagText s) = not $ null $ trim $ toString s
-relevant _ = True
+relevant _ = False
+
+parseTags :: StringLike s => s -> [Tag.Tag s]
+parseTags = filter relevant . Tag.parseTags
 
 parseXML :: StringLike s => XmlParser s b -> s -> b
-parseXML p xs =
-    fst $ runParser p $ filter relevant $ Tag.parseTags xs
+parseXML p xs
+    = fst . runParser p
+    . addTop . parseTags $ xs
+  where
+    addTop xs = Tag.TagOpen topName [] : xs ++ [Tag.TagClose topName]
+    topName = fromString "top"
 
 -- | Parser example.
 
