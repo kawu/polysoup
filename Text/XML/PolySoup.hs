@@ -15,12 +15,15 @@ module Text.XML.PolySoup
 , getAttr
 , many_
 , satisfyPred
+, ignore
 , ignoreAny
 , ignoreText
 , ignoreTag
 , ignoreAnyM
+, cut
 , text
 , join
+, joinP
 , joinR
 , joinL
 , (</>)
@@ -142,6 +145,9 @@ satisfyPred (TagPred t) =
     let q = isJust . t
     in  fromJust . t <$> satisfy q
 
+ignore :: Eq s => XmlParser s ()
+ignore = many_ ignoreAny
+
 -- | Ignore xml tree or text element. 
 ignoreAny :: Eq s => XmlParser s ()
 ignoreAny = ignoreText <|> ignoreTag
@@ -163,20 +169,26 @@ ignoreAnyM = const mempty <$> ignoreAny
 text :: Eq s => XmlParser s s
 text = satisfyPred tagText
 
-join :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, b)
+cut :: Eq s => TagPred s a -> XmlParser s a
+cut p = p </ ignoreAny
+
+join :: Eq s => TagPred s a -> (a -> XmlParser s b) -> XmlParser s b
 join p q = do
     (x, name) <- satisfyPred ((,) <$> p <*> tagOpenName)
-    name `seq` x `seq` (x,) <$> q <* satisfyPred (isTagCloseName name)
+    name `seq` x `seq` q x <* satisfyPred (isTagCloseName name)
+
+joinP :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, b)
+joinP p q = join p $ \x -> (x,) <$> q
 
 joinR :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s b
-joinR p q = snd <$> join p q
+joinR p q = snd <$> joinP p q
 
 joinL :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s a
-joinL p q = fst <$> join p q
+joinL p q = fst <$> joinP p q
 
 (</>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, [b])
 (</>) p q =
-    join p (catMaybes <$> many qMaybe)
+    joinP p (catMaybes <$> many qMaybe)
   where
     qMaybe = Just <$> q
          <|> const Nothing <$> ignoreAny
