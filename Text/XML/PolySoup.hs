@@ -278,47 +278,4 @@ parseTags :: StringLike s => s -> [Tag.Tag s]
 parseTags = filter relevant . Tag.parseTags
 
 parseXML :: StringLike s => XmlParser s b -> s -> b
-parseXML p xs
-    = fst . runParser p
-    . addTop . parseTags $ xs
-  where
-    addTop xs = Tag.TagOpen topName [] : xs ++ [Tag.TagClose topName]
-    topName = fromString "top"
-
--- | Parser example.
-
--- data Res a = Form a | Sense a deriving (Show)
--- 
--- testParser :: XmlParser String [Res String]
--- testParser = tag "LexicalResource" //> lexParser
--- 
--- lexParser :: XmlParser String [Res String]
--- lexParser = tag "LexicalEntry" />
---         map Form <$> formParser 
---     <|> map Sense <$> senseParser
--- 
--- -- | TODO: There might be two sense relations!
--- senseParser :: XmlParser String [String]
--- senseParser = tag "Sense" `joinR` do
---     x <- optional $ tag "MonolingualExternalRef"
---             /@ hasAttr "att" "externalReference"
---             *> getAttr "val"
---     y <- optional $ tag "SenseRelation"
---             /@ hasAttr "att" "label"
---             *> getAttr "val"
---     many_ ignoreAny
---     choose x y
---   where
---     choose (Just x) _ = return x
---     choose _ (Just y) = return y
---     choose _ _        = error "Sense empty"
--- 
--- formParser :: XmlParser String [String]
--- formParser = tag "WordForm" <|> tag "Lemma"
---           /@ hasAttr "att" "writtenForm" *> getAttr "val"
--- 
--- main = do
---     [inPath] <- getArgs
---     -- xs <- filter relevant . Tag.parseTags <$> readFile inPath
---     xs <- parseXML testParser <$> readFile inPath
---     forM_ xs print
+parseXML p = fst . runParser p . parseTags
