@@ -51,7 +51,7 @@ import System.Environment (getArgs)
 import Data.Monoid
 import Control.Applicative
 import Data.Char (isSpace)
-import Control.Monad (forM_)
+import Control.Monad (forM_, guard)
 import Data.Maybe (catMaybes, isJust, fromJust)
 import qualified Text.HTML.TagSoup as Tag
 import Text.StringLike
@@ -110,24 +110,23 @@ isTagText = TagPred (fromBool . Tag.isTagText)
 tagText :: TagPred s s
 tagText = TagPred Tag.maybeTagText 
 
+-- | Another version of fromAttrib, which returns Nothing when
+-- attribute is not present. Which makes a difference.
+fromAttrib :: (Show str, Eq str, StringLike str)
+           => str -> Tag.Tag str -> Maybe str
+fromAttrib att (Tag.TagOpen _ atts) = lookup att atts
+fromAttrib _ x = error ("(" ++ show x ++ ") is not a TagOpen")
+
 hasAttr :: (Show s, Eq s, StringLike s) => s -> s -> TagPred s ()
 hasAttr name x =
     isTagOpen *> TagPred checkIt 
   where
-    checkIt t = if Tag.fromAttrib name t == x
-        then Just ()
-        else Nothing
+    checkIt t = do
+        y <- fromAttrib name t
+        guard (x == y)
 
 getAttr :: (Show s, Eq s, StringLike s) => s -> TagPred s s
-getAttr name =
-    isTagOpen *> TagPred getIt
-  where
-    getIt t = if strNull x
-        then Nothing
-        else Just x
-      where
-        x = Tag.fromAttrib name t
-
+getAttr name = isTagOpen *> TagPred (fromAttrib name)
 
 -- | XML forest parser with result type a.  TODO: distinguish XmlParser
 -- and TagParser types using newtype?
