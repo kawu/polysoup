@@ -13,6 +13,7 @@ module Text.XML.PolySoup
 , tag
 , hasAttr
 , getAttr
+, maybeAttr
 , many_
 , satisfyPred
 , ignore
@@ -26,9 +27,11 @@ module Text.XML.PolySoup
 , joinP
 , joinR
 , joinL
+, (>^>)
 , (<^>)
 , (^>)
 , (<^)
+, (>/>)
 , (</>)
 , (/>)
 , (</)
@@ -122,6 +125,9 @@ hasAttr name x =
 getAttr :: (Show s, Eq s, StringLike s) => s -> TagPred s s
 getAttr name = isTagOpen *> TagPred (fromAttrib name)
 
+maybeAttr :: (Show s, Eq s, StringLike s) => s -> TagPred s (Maybe s)
+maybeAttr name = isTagOpen *> TagPred (Just . fromAttrib name)
+
 -- | XML forest parser with result type a.  TODO: distinguish XmlParser
 -- and TagParser types using newtype?
 type XmlParser s a = Parser (Tag.Tag s) a
@@ -180,6 +186,10 @@ joinL :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s a
 joinL p q = fst <$> joinP p q
 
 -- | Short versions of join combinators.
+(>^>) :: Eq s => TagPred s a -> (a -> XmlParser s b) -> XmlParser s b
+(>^>) = join
+infixr 2 >^>
+
 (<^>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, b)
 (<^>) = joinP
 infixr 2 <^>
@@ -193,6 +203,14 @@ infixr 2 ^>
 infixr 2 <^
 
 -- | XPath-like combinators.
+(>/>) :: Eq s => TagPred s a -> (a -> XmlParser s b) -> XmlParser s [b]
+(>/>) p q =
+    p `join` \x -> (catMaybes <$> many (qMaybe x))
+  where
+    qMaybe x =  Just <$> q x
+            <|> const Nothing <$> ignoreAny
+infixr 2 >/>
+
 (</>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, [b])
 (</>) p q =
     joinP p (catMaybes <$> many qMaybe)
