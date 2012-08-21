@@ -1,5 +1,5 @@
 Name:               polysoup
-Version:            0.0.0
+Version:            0.0.1
 Synopsis:           Online XML parsing with polyparse and tagsoup
 License:            BSD3
 License-file:       LICENSE

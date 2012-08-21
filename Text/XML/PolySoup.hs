@@ -26,6 +26,9 @@ module Text.XML.PolySoup
 , joinP
 , joinR
 , joinL
+, (<^>)
+, (^>)
+, (<^)
 , (</>)
 , (/>)
 , (</)
@@ -33,15 +36,6 @@ module Text.XML.PolySoup
 , (<#>)
 , (#>)
 , (##>)
--- , (/@)
--- , (//@)
--- , (/!)
--- , (//!)
--- , mkGenP
--- , mkListP
--- , mkFirstP
--- , mkLastP
--- , mkP
 , parseTags
 , parseXML
 , module Text.ParserCombinators.Poly.Lazy
@@ -161,7 +155,7 @@ ignoreTag = do
     name <- satisfyPred tagOpenName
     name `seq` many_ ignoreAny *> satisfyPred (isTagCloseName name)
 
--- | Version with monoid result type. 
+-- | Version with a monoid result type.
 ignoreAnyM :: (Eq s, Monoid m) => XmlParser s m
 ignoreAnyM = const mempty <$> ignoreAny
 
@@ -185,6 +179,20 @@ joinR p q = snd <$> joinP p q
 joinL :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s a
 joinL p q = fst <$> joinP p q
 
+-- | Short versions of join combinators.
+(<^>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, b)
+(<^>) = joinP
+infixr 2 <^>
+
+(^>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s b
+(^>) = joinR
+infixr 2 ^>
+
+(<^) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s a
+(<^) = joinL
+infixr 2 <^
+
+-- | XPath-like combinators.
 (</>) :: Eq s => TagPred s a -> XmlParser s b -> XmlParser s (a, [b])
 (</>) p q =
     joinP p (catMaybes <$> many qMaybe)
@@ -224,43 +232,6 @@ infixr 2 #>
 (##>) :: (Eq s, Monoid m) => TagPred s a -> TagParser s m -> TagParser s m
 (##>) p q = mconcat <$> (p //> q)
 infixr 2 ##>
-
--- mkGenP :: (Eq s, Monoid m) => (a -> m) -> TagPred s a -> TagParser s m
--- mkGenP f p = f <$> p `joinL` many_ ignoreAny
--- 
--- mkListP :: Eq s => TagPred s a -> TagParser s [a]
--- mkListP  = mkGenP (:[])
--- 
--- | TODO: write "tag "..." /> tagName </ many_ ignoreAny"
--- | or          "tag "..." /> tagName </ ignore"
--- instead of    "tag "..." /@ tagName" ?
--- (/@) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s [b]
--- (/@) p q = p /> mkListP q
--- infixr 2 /@
--- 
--- (//@) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s [b]
--- (//@) p q = p //> mkListP q
--- infixr 2 //@
--- 
--- mkFirstP :: Eq s => TagPred s a -> TagParser s (First a)
--- mkFirstP = mkGenP (First . Just)
--- 
--- (/!) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s (First b)
--- (/!) p q = p /> mkFirstP q
--- infixr 2 /!
--- 
--- (//!) :: Eq s => TagPred s a -> TagPred s b -> XmlParser s (First b)
--- (//!) p q = p //> mkFirstP q
--- infixr 2 //!
--- 
--- -- | Using this function may cause memory leak.  Consider using
--- -- last <$> ... mkListP ... instead.
--- mkLastP :: Eq s => TagPred s a -> TagParser s (Last a)
--- mkLastP = mkGenP (Last . Just)
--- 
--- -- | A shortcut for mkListP.
--- mkP :: Eq s => TagPred s a -> TagParser s [a]
--- mkP = mkListP
 
 trim :: String -> String
 trim = f . f where f = reverse . dropWhile isSpace
