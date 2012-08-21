@@ -4,6 +4,7 @@ module Text.XML.PolySoup
 ( XmlParser
 , TagPred
 , true
+, getTag
 , isTagOpen
 , isTagClose
 , isTagOpenName
@@ -22,6 +23,9 @@ module Text.XML.PolySoup
 , ignoreTag
 , ignoreAnyM
 , cut
+, findAll
+, findIgnore
+, find
 , text
 , join
 , joinP
@@ -40,7 +44,10 @@ module Text.XML.PolySoup
 , (#>)
 , (##>)
 , parseTags
-, parseXML
+, tagsParseXml
+, parseXml
+, elemTags
+, collTags
 , module Text.ParserCombinators.Poly.Lazy
 ) where
 
@@ -70,6 +77,9 @@ instance Applicative (TagPred s) where
 instance Alternative (TagPred s) where  
     empty = TagPred $ \t -> Nothing
     TagPred p <|> TagPred p' = TagPred $ \t -> p t <|> p' t
+
+getTag :: TagPred s (Tag.Tag s)
+getTag = TagPred Just
 
 fromBool :: Bool -> Maybe ()
 fromBool True  = Just ()
@@ -171,6 +181,24 @@ text = satisfyPred tagText
 cut :: Eq s => TagPred s a -> XmlParser s a
 cut p = p </ ignoreAny
 
+-- | Parse a list of XML elements and collect all values
+-- retrieved with a given parser.
+findAll :: Eq s => XmlParser s a -> XmlParser s [a]
+findAll q =
+    let q' = Just <$> q <|> Nothing <$ ignoreAny
+    in  catMaybes <$> many q'
+
+-- | Find first XML element accepted be a given parser and
+-- ignore the rest of elements in the collection.
+findIgnore :: Eq s => XmlParser s a -> XmlParser s (Maybe a)
+findIgnore q = findAll q >>= \xs -> return $ case xs of
+    (x:_) -> Just x
+    []    -> Nothing
+
+-- | TODO: XmlParser s (Maybe a)?
+find :: Eq s => XmlParser s a -> XmlParser s a
+find q = q <|> ignoreAny *> find q
+
 join :: Eq s => TagPred s a -> (a -> XmlParser s b) -> XmlParser s b
 join p q = do
     (x, name) <- satisfyPred ((,) <$> p <*> tagOpenName)
@@ -251,9 +279,6 @@ infixr 2 #>
 (##>) p q = mconcat <$> (p //> q)
 infixr 2 ##>
 
-trim :: String -> String
-trim = f . f where f = reverse . dropWhile isSpace
-
 relevant :: StringLike s => Tag.Tag s -> Bool
 relevant (Tag.TagOpen name _)
     | name == fromString "?xml" = False
@@ -262,8 +287,34 @@ relevant (Tag.TagClose _) = True
 relevant (Tag.TagText s) = not $ null $ trim $ toString s
 relevant _ = False
 
+trim :: String -> String
+trim = f . f where f = reverse . dropWhile isSpace
+
+
 parseTags :: StringLike s => s -> [Tag.Tag s]
 parseTags = filter relevant . Tag.parseTags
 
-parseXML :: StringLike s => XmlParser s b -> s -> b
-parseXML p = fst . runParser p . parseTags
+tagsParseXml :: StringLike s => XmlParser s b -> [Tag.Tag s] -> b
+tagsParseXml p = fst . runParser p
+
+parseXml :: StringLike s => XmlParser s b -> s -> b
+parseXml p = tagsParseXml p . parseTags
+
+
+-- | Collect all tags of the parsed XML element.
+elemTags :: Eq s => XmlParser s [Tag.Tag s]
+elemTags = trueElemTags <|> (:[]) <$> textTag
+
+trueElemTags :: Eq s => XmlParser s [Tag.Tag s]
+trueElemTags = do
+    (beg, name) <- satisfyPred ((,) <$> getTag <*> tagOpenName)
+    inside <- beg `seq` name `seq` collTags
+    end <- satisfyPred (getTag <* isTagCloseName name)
+    return (beg : inside ++ [end])
+
+textTag :: XmlParser s (Tag.Tag s)
+textTag = fst <$> satisfyPred ((,) <$> getTag <*> isTagText)
+
+-- | Retrieve tags related to a collection of XML elements.
+collTags :: Eq s => XmlParser s [Tag.Tag s]
+collTags = concat <$> many elemTags
