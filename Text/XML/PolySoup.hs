@@ -48,6 +48,7 @@ module Text.XML.PolySoup
 , parseXml
 , elemTags
 , collTags
+, escapeXml
 , module Text.ParserCombinators.Poly.Lazy
 ) where
 
@@ -318,3 +319,6 @@ textTag = fst <$> satisfyPred ((,) <$> getTag <*> isTagText)
 -- | Retrieve tags related to a collection of XML elements.
 collTags :: Eq s => XmlParser s [Tag.Tag s]
 collTags = concat <$> many elemTags
+
+escapeXml :: StringLike str => str -> str
+escapeXml = Tag.escapeHTML
