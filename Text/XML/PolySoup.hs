@@ -12,9 +12,11 @@ module Text.XML.PolySoup
 , true
 , getTag
 , isTagOpen
-, isTagClose
 , isTagOpenName
+, isTagClose
+, isTagCloseName
 , isTagText
+, isTagComment
 , tagOpenName
 , tagText
 , tag
@@ -134,6 +136,12 @@ tagOpenName =
 -- | Test if the tag is a text node.
 isTagText :: TagPred s ()
 isTagText = TagPred (fromBool . Tag.isTagText)
+
+-- | Test if the tag is a text node.
+isTagComment :: TagPred s ()
+isTagComment =
+    let isComm (Tag.TagComment {}) = True; isComm _ = False
+    in  TagPred (fromBool . isComm)
 
 -- | Get text content of the tag.
 tagText :: TagPred s s
