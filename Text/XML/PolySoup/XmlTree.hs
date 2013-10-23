@@ -57,12 +57,12 @@ parseForest :: Eq s => [S.Tag s] -> [XmlTree s]
 parseForest = fst . runParser (many xmlTreeP)
 
 
--- | Parse tags to an XML tree representation.
+-- | A parser from tags to an XML tree.
 xmlTreeP :: Eq s => XmlParser s (XmlTree s)
 xmlTreeP = nodeP <|> leafP
 
 
--- | Internal node tree.
+-- | Internal node parser.
 nodeP :: Eq s => XmlParser s (XmlTree s)
 nodeP = do
     x <- satisfy S.isTagOpen
@@ -73,10 +73,12 @@ nodeP = do
     tagName _ = error "tagName: not an open tag"
 
 
--- | Leaf node tree.
+-- | Leaf node parser.
 leafP :: XmlParser s (XmlTree s)
-leafP = flip Node [] <$>
-    (satisfy $ \x -> not (S.isTagOpen x || S.isTagClose x))
+leafP = fmap
+    (flip Node [])
+    (satisfy $ \x ->
+        not (S.isTagOpen x || S.isTagClose x))
     
 
 ---------------------------------------------------------------------
