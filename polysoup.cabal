@@ -29,7 +29,11 @@ library
     exposed-modules:
         Text.XML.PolySoup
       , Text.XML.PolySoup.XmlTree
-      , Text.XML.PolySoup.Combinators
+      , Text.XML.PolySoup.TagPred
+      , Text.XML.PolySoup.XPath
+      , Text.XML.PolySoup.TreeParser
+      , Text.XML.PolySoup.ForestParser
+      -- , Text.XML.PolySoup.Combinators
 
     ghc-options: -Wall
 

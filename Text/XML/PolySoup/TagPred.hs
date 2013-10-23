@@ -1,23 +1,8 @@
--- | The module provides XML processing combinators.
---
--- We wish to provide to groups of combinators:
--- * Combinators for extracting useful information from an XML tree,
--- * Combinators for modifying XML tree.
---
--- The first group will be probably easier to implement, since we don't
--- to preserve the structure of input tree.  Lets start with this one then.
---
--- Naming conventions:
---
---   * Parsers and predicates ending with `_` do not return any results. 
-
-
-module Text.XML.PolySoup.Combinators
+module Text.XML.PolySoup.TagPred
 (
--- * Tag predicates
--- ** Predicate type
+-- * Types
   TagPred (..)
--- ** Core predicates
+-- * Core predicates
 , any
 , satisfy
 , node
@@ -29,7 +14,7 @@ module Text.XML.PolySoup.Combinators
 , hasName
 , hasAttr
 , hasAttrVal
--- ** Convenience predicates
+-- * Convenience predicates
 , name
 ) where
 
@@ -40,18 +25,18 @@ import           Control.Monad ((<=<))
 import           Data.Maybe (isJust)
 import qualified Text.HTML.TagSoup as S
 
-import           Text.XML.PolySoup.XmlTree
-
-
----------------------------------------------------------------------
--- Tag predicate
----------------------------------------------------------------------
-
 
 -- | A tag predicate checks if the HTML tag satisfies some properties
 -- and extracts attribute values.  You can compose tag predicates using
 -- Functor, Applicative and Alternative operators: '*>', '<*', '<|>' etc.
-newtype TagPred s a = TagPred { unTagPred :: S.Tag s -> Maybe a }
+-- TODO: Change name to TagPredicate or TagParser?
+--
+-- Another point: it should be named neither parser nor a predicate, but
+-- rather something like extractor?
+--
+-- Yet another: it doesn't make sense to use `many` or `some` on the
+-- tag predicate.  Point it out!
+newtype TagPred s a = TagPred (S.Tag s -> Maybe a)
 
 instance Functor (TagPred s) where  
     fmap f (TagPred g) = TagPred $ fmap (fmap f) g
@@ -138,28 +123,8 @@ name = TagPred getName
 
 
 ---------------------------------------------------------------------
--- Extraction
----------------------------------------------------------------------
-
-
----------------------------------------------------------------------
--- Utilities
----------------------------------------------------------------------
-
-
--- This section is supposed to be exported, in comparison to the
--- Misc section below.
-
-
----------------------------------------------------------------------
 -- Misc
 ---------------------------------------------------------------------
-
-
--- -- | Change `Bool` to a `Maybe ()`.
--- fromBool :: Bool -> Maybe ()
--- fromBool True  = Just ()
--- fromBool False = Nothing
 
 
 -- | Get name of the tag.

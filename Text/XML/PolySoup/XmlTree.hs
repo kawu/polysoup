@@ -13,6 +13,7 @@ module Text.XML.PolySoup.XmlTree
 (
 -- * XML Tree
   XmlTree
+, XmlForest
 -- ** Parsing
 , parseTree
 , parseForest
@@ -36,8 +37,12 @@ import           Text.ParserCombinators.Poly.Lazy
 type XmlParser s a = Parser (S.Tag s) a
 
 
--- | A parsed XML tree.  In nodes the content/opening tags are preserved.
+-- | A parsed XML tree.  Closing tags are not preserved.
 type XmlTree s = Tree (S.Tag s)
+
+
+-- | A parsed XML forest.  Closing tags are not preserved.
+type XmlForest s = [XmlTree s]
 
 
 ---------------------------------------------------------------------
@@ -53,7 +58,7 @@ parseTree = fst . runParser xmlTreeP
 -- | Parse XML forest from a list of tags.  Note, that if the XML file
 -- has additional headers, the `parseForest` function has to be used to
 -- parse it correctly.
-parseForest :: Eq s => [S.Tag s] -> [XmlTree s]
+parseForest :: Eq s => [S.Tag s] -> XmlForest s
 parseForest = fst . runParser (many xmlTreeP)
 
 
@@ -94,7 +99,7 @@ renderTree (Node v xs) = if S.isTagOpen v
 
 
 -- | Render XML forest tags.
-renderForest :: [XmlTree s] -> [S.Tag s]
+renderForest :: XmlForest s -> [S.Tag s]
 renderForest = concatMap renderTree
 
 
