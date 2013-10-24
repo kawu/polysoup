@@ -33,9 +33,9 @@ library
 
     exposed-modules:
         Text.XML.PolySoup
+      , Text.XML.PolySoup.XmlTree
       , Text.XML.PolySoup.Predicate
       , Text.XML.PolySoup.Parser
-      , Text.XML.PolySoup.XmlTree
       , Text.XML.PolySoup.Tag
       , Text.XML.PolySoup.Combine
 

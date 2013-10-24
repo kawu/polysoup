@@ -93,7 +93,7 @@ every (Q p) =
 ---------------------------------------------------------------------
 
 
--- Check, if the first tree satisfies the given predicate.
+-- | Check, if the first tree satisfies the given predicate.
 pop :: Q a b -> P a b
 pop (Q p) = P $ \tts -> case tts of
     (t:ts)  -> (,ts) <$> p t
