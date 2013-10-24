@@ -14,9 +14,8 @@ import           Control.Applicative
 -- | A predicate checks if the given element satisfies some properties
 -- and extracts its attribute values.  You can compose predicates using
 -- Functor, Applicative and Alternative operators: '*>', '<*', '<|>' etc.
---
--- It doesn't make sense to use `many` or `some` on the predicate.
--- Point it out!
+-- Note, that it doesn't really have sense to use function like `many`
+-- or `some`, since the extracting predicate doesn't consume any input.
 newtype Q a b = Q { runQ :: (a -> Maybe b) }
 
 instance Functor (Q a) where

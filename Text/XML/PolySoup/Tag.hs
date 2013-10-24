@@ -1,4 +1,4 @@
--- | Predicates on XML nodes (opening tags).
+-- | The module provides tag-level predicates.
 
 
 module Text.XML.PolySoup.Tag

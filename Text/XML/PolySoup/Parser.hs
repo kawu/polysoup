@@ -1,7 +1,10 @@
 {-# LANGUAGE TupleSections #-}
 
 
--- | A generic parser.
+-- | The module defines a generic parser which can be used, in particular,
+-- to parse XML forests.  The main characteristic of the parser is that it
+-- can be used in a sequential (sub-trees are processed in order) and a
+-- selective (subtrees are process regardless of their position) way.
 
 
 module Text.XML.PolySoup.Parser
