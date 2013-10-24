@@ -3,7 +3,7 @@
 
 module Text.XML.PolySoup.Tag
 (
--- * Core
+-- * Basic predicates
   node
 , leaf
 , text
@@ -14,7 +14,7 @@ module Text.XML.PolySoup.Tag
 , hasAttr
 , hasAttrVal
 
--- * Convenience
+-- * Convenience predicates
 , name
 ) where
 

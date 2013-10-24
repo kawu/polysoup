@@ -3,12 +3,11 @@
 
 module Text.XML.PolySoup.Predicate
 ( Q (..)
-, any
+, true
 , satisfy
 ) where
 
 
-import           Prelude hiding (any)
 import           Control.Applicative
 
 
@@ -33,8 +32,8 @@ instance Alternative (Q a) where
 
 
 -- | Predicate which is always satisfied.
-any :: Q a a
-any = Q Just
+true :: Q a a
+true = Q Just
 
 
 -- | Check if the given predicate is satisfied.

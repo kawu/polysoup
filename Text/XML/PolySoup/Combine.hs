@@ -17,8 +17,11 @@
 
 module Text.XML.PolySoup.Combine
 (
+-- * Predicate conversion
+  tag
+
 -- * XPath-like combinators
-  (</>)
+, (</>)
 , (>/>)
 , (/>)
 , (//>)
@@ -27,14 +30,13 @@ module Text.XML.PolySoup.Combine
 , joinP
 , joinL
 , joinR
--- , (>^>)
--- , (<^>)
--- , (^>)
--- , (<^)
+, (>^>)
+, (<^>)
+, (^>)
+, (<^)
 ) where
 
 
-import           Prelude hiding (any)
 import           Control.Applicative
 import           Data.Tree
 import           Text.HTML.TagSoup (Tag)
@@ -42,6 +44,16 @@ import           Text.HTML.TagSoup (Tag)
 import           Text.XML.PolySoup.XmlTree
 import           Text.XML.PolySoup.Predicate
 import           Text.XML.PolySoup.Parser
+
+
+---------------------------------------------------------------------
+-- Predicate conversion
+---------------------------------------------------------------------
+
+
+-- | Make a tree-level predicate from a tag-level predicate.
+tag :: Q (Tag s) a -> Q (XmlTree s) a
+tag (Q p) = Q $ \(Node t _) -> p t
 
 
 ---------------------------------------------------------------------
@@ -86,7 +98,7 @@ infixr 2 />
     Nothing -> Nothing
   where
     g t = case runQ q t of
-        Nothing -> unJust $ runQ (any //> q) t
+        Nothing -> unJust $ runQ (true //> q) t
         Just w  -> [w]
 infixr 2 //>
 
@@ -122,25 +134,25 @@ joinL :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) a
 joinL p q = fst <$> joinP p q
 
 
--- -- | Infix version of the join combinators.
--- (>^>) :: Q (Tag s) a -> (a -> P (XmlTree s) b) -> Q (XmlTree s) b
--- (>^>) = join
--- infixr 2 >^>
--- 
--- -- | Infix version of the joinP combinators.
--- (<^>) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) (a, b)
--- (<^>) = joinP
--- infixr 2 <^>
--- 
--- -- | Infix version of the joinR combinators.
--- (^>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) b
--- (^>) = joinR
--- infixr 2 ^>
--- 
--- -- | Infix version of the joinL combinators.
--- (<^) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) a
--- (<^) = joinL
--- infixr 2 <^
+-- | Infix version of the join combinators.
+(>^>) :: Q (Tag s) a -> (a -> P (XmlTree s) b) -> Q (XmlTree s) b
+(>^>) = join
+infixr 2 >^>
+
+-- | Infix version of the joinP combinators.
+(<^>) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) (a, b)
+(<^>) = joinP
+infixr 2 <^>
+
+-- | Infix version of the joinR combinators.
+(^>) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) b
+(^>) = joinR
+infixr 2 ^>
+
+-- | Infix version of the joinL combinators.
+(<^) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) a
+(<^) = joinL
+infixr 2 <^
 
 
 
