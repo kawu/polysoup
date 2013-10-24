@@ -11,11 +11,12 @@ module Text.XML.PolySoup.Parser
 , evalP
 
 -- * Parsing
--- ** Sequential
-, one
 -- ** Selective
+, find
 , first
 , every
+-- ** Sequential
+, pop
 ) where
 
 
@@ -55,23 +56,16 @@ evalP p = fmap fst . runP p
 
 
 ---------------------------------------------------------------------
--- Sequential parsers
----------------------------------------------------------------------
-
-
--- | Make parser from a predicate.
-one :: Q a b -> P a b
-one (Q p) = P $ \tts -> case tts of
-    (t:ts)  -> (,ts) <$> p t
-    []      -> Nothing
-
-
----------------------------------------------------------------------
 -- Selective parsers
 ---------------------------------------------------------------------
 
 
--- | Select the first tree satisfying the given predicate.
+-- | A synonym to `first`.
+find :: Q a b -> P a b
+find = first
+
+
+-- | Find the first tree satisfying the given predicate.
 first :: Q a b -> P a b
 first (Q p) = P $ go [] where
     go acc (t:ts) = case p t of
@@ -89,3 +83,15 @@ every (Q p) =
     upd (vs, acc) t = case p t of
         Just v  -> (v:vs, acc)
         Nothing -> (vs, t:acc)
+
+
+---------------------------------------------------------------------
+-- Sequential parsers
+---------------------------------------------------------------------
+
+
+-- Check, if the first tree satisfies the given predicate.
+pop :: Q a b -> P a b
+pop (Q p) = P $ \tts -> case tts of
+    (t:ts)  -> (,ts) <$> p t
+    []      -> Nothing

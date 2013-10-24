@@ -18,13 +18,14 @@
 module Text.XML.PolySoup.Combine
 (
 -- * Predicate conversion
-  tag
+  node
 
 -- * XPath-like combinators
-, (</>)
 , (>/>)
+, (</>)
 , (/>)
 , (//>)
+
 -- * Tag/forest parsing combinators
 , join
 , joinP
@@ -52,8 +53,10 @@ import           Text.XML.PolySoup.Parser
 
 
 -- | Make a tree-level predicate from a tag-level predicate.
-tag :: Q (Tag s) a -> Q (XmlTree s) a
-tag (Q p) = Q $ \(Node t _) -> p t
+-- Note, that in most cases you won't need this function, you
+-- can make use of the `Query` typeclass.
+node :: Q (Tag s) a -> Q (XmlTree s) a
+node (Q p) = Q $ \(Node t _) -> p t
 
 
 ---------------------------------------------------------------------
@@ -61,15 +64,14 @@ tag (Q p) = Q $ \(Node t _) -> p t
 ---------------------------------------------------------------------
 
 
--- TODO: usun to ciagle rozroznienie na Nothing i Just.  Monada?
-
-
 -- | Combine a tag predicate with an XML predicate.  The XML predicate can
 -- depend on the value of tag parser and will be called multiple times for
 -- tag children elements.
 (>/>) :: Q (Tag s) a -> (a -> Q (XmlTree s) b) -> Q (XmlTree s) [b]
 (>/>) (Q p) q = Q $ \(Node t ts) -> case p t of
-    Just v  -> Just [w | Just w <- runQ q' <$> ts] where q' = q v
+    Just v  ->
+        let q' = q v
+        in  Just [w | Just w <- runQ q' <$> ts]
     Nothing -> Nothing
 infixr 2 >/>
 
@@ -139,22 +141,23 @@ joinL p q = fst <$> joinP p q
 (>^>) = join
 infixr 2 >^>
 
+
 -- | Infix version of the joinP combinators.
 (<^>) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) (a, b)
 (<^>) = joinP
 infixr 2 <^>
+
 
 -- | Infix version of the joinR combinators.
 (^>) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) b
 (^>) = joinR
 infixr 2 ^>
 
+
 -- | Infix version of the joinL combinators.
 (<^) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) a
 (<^) = joinL
 infixr 2 <^
-
-
 
 
 ---------------------------------------------------------------------

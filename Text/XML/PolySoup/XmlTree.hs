@@ -40,6 +40,11 @@ type XmlParser s a = Parser (S.Tag s) a
 -- | A parsed XML tree.  Closing tags are not preserved.
 type XmlTree s = Tree (S.Tag s)
 
+-- data XmlTree s = Node
+--     { rootLabel :: S.Tag s
+--     , subForest :: Forest a }
+--     deriving (Show, Eq, Ord)
+
 
 -- | A parsed XML forest.  Closing tags are not preserved.
 type XmlForest s = [XmlTree s]
