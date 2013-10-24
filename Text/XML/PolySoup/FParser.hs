@@ -1,14 +1,19 @@
 {-# LANGUAGE TupleSections #-}
 
 
-module Text.XML.PolySoup.ForestParser
+-- | XML forest parser.
+
+
+module Text.XML.PolySoup.FParser
 (
 -- * Core
-  ForestParser (..)
+  FParser (..)
 , evalFP
--- * Sequential parsers
+
+-- * Parsing
+-- ** Sequential
 , tree
--- * Selective parsers
+-- ** Selective
 , first
 , every
 ) where
@@ -18,28 +23,28 @@ import           Control.Applicative
 import qualified Control.Arrow as Arr
 
 import           Text.XML.PolySoup.XmlTree
-import           Text.XML.PolySoup.TreeParser
+import           Text.XML.PolySoup.Predicate
 
 
 -- | An XML forest parser.
-newtype ForestParser s a = FP
+newtype FParser s a = FP
     { runFP :: XmlForest s -> Maybe (a, XmlForest s) }
 
-instance Functor (ForestParser s) where
+instance Functor (FParser s) where
     fmap f (FP p) = FP $ fmap (fmap $ Arr.first f) p
 
-instance Applicative (ForestParser s) where
+instance Applicative (FParser s) where
     pure x = FP $ Just . (x,)
     FP p <*> FP q = FP $ \t0 -> do
         (f, t1) <- p t0
         (x, t2) <- q t1  
         return (f x, t2)
 
-instance Alternative (ForestParser s) where
+instance Alternative (FParser s) where
     empty = FP $ \_ -> Nothing
     FP p <|> FP q = FP $ \t -> p t <|> q t
 
-instance Monad (ForestParser s) where
+instance Monad (FParser s) where
     return = pure
     FP p >>= f = FP $ \t0 -> do
         (x, t1) <- p t0
@@ -47,7 +52,7 @@ instance Monad (ForestParser s) where
 
 
 -- | Evaluate parser on the given XML forest.
-evalFP :: ForestParser s a -> XmlForest s -> Maybe a
+evalFP :: FParser s a -> XmlForest s -> Maybe a
 evalFP p = fmap fst . runFP p
 
 
@@ -57,8 +62,8 @@ evalFP p = fmap fst . runFP p
 
 
 -- | Generic predicate on a tree.
-tree :: TreeParser s a -> ForestParser s a
-tree (TP p) = FP $ \tts -> case tts of
+tree :: P (XmlTree s) a -> FParser s a
+tree (P p) = FP $ \tts -> case tts of
     (t:ts)  -> (,ts) <$> p t
     []      -> Nothing
 
@@ -69,8 +74,8 @@ tree (TP p) = FP $ \tts -> case tts of
 
 
 -- | Select the first tree satisfying the given predicate.
-first :: TreeParser s a -> ForestParser s a
-first (TP p) = FP $ go [] where
+first :: P (XmlTree s) a -> FParser s a
+first (P p) = FP $ go [] where
     go acc (t:ts) = case p t of
         Just v  -> Just (v, reverse acc ++ ts)
         Nothing -> go (t:ts) ts
@@ -78,8 +83,8 @@ first (TP p) = FP $ go [] where
 
 
 -- | Select every tree satisfying the given predicate.
-every :: TreeParser s a -> ForestParser s [a]
-every (TP p) =
+every :: P (XmlTree s) a -> FParser s [a]
+every (P p) =
     FP $ prep . foldl upd ([], [])
   where
     prep (x, y) = Just (reverse x, reverse y)

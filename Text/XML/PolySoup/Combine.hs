@@ -1,54 +1,61 @@
-module Text.XML.PolySoup.XPath
-( (</>)
+-- | The module provides some common XML tree parsing combinators.
+
+
+module Text.XML.PolySoup.Combine
+(
+-- * XPath-like combinators
+  (</>)
 , (>/>)
 , (/>)
 , (//>)
+-- * 
 ) where
 
 
 import           Prelude hiding (any)
 import           Control.Applicative
 import           Data.Tree
+import           Text.HTML.TagSoup (Tag)
 
-import           Text.XML.PolySoup.TagPred
-import           Text.XML.PolySoup.TreeParser
+import           Text.XML.PolySoup.XmlTree
+import           Text.XML.PolySoup.Predicate
 
 
 -- | Combine the tag parser with the XML parser.  The XML parser can
 -- depend on the value of tag parser and will be called multiple times
 -- for tag children elements.
-(>/>) :: TagPred s a -> (a -> TreeParser s b) -> TreeParser s [b]
-(>/>) (TagPred p) q = TP $ \(Node t ts) -> case p t of
+(>/>) :: P (Tag s) a -> (a -> P (XmlTree s) b) -> P (XmlTree s) [b]
+(>/>) (P p) q = P $ \(Node t ts) -> case p t of
     Nothing -> Nothing
-    Just v  -> Just [w | Just w <- runTP q' <$> ts] where q' = q v
+    Just v  -> Just [w | Just w <- runP q' <$> ts] where q' = q v
 infixr 2 >/>
 
 
 -- | Combine the tag parser with the XML parser.  The XML parser will
 -- be called multiple times for tag children elements.
-(</>) :: TagPred s a -> TreeParser s b -> TreeParser s (a, [b])
-(</>) (TagPred p) q = TP $ \(Node t ts) -> case p t of
+(</>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) (a, [b])
+(</>) (P p) q = P $ \(Node t ts) -> case p t of
     Nothing -> Nothing
-    Just v  -> Just (v, [w | Just w <- runTP q <$> ts])
+    Just v  -> Just (v, [w | Just w <- runP q <$> ts])
 infixr 2 </>
 
 
 -- | Combine the tag parser with the XML parser.  The XML parser will
 -- be called multiple times for tag children elements.
-(/>) :: TagPred s a -> TreeParser s b -> TreeParser s [b]
-(/>) p q = snd <$> (p </> q)
+(/>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) [b]
+(/>) p q = p >/> const q
 infixr 2 />
 
 
 -- | Similar to '/>' combinator but runs the XML parser for all
 -- descendant XML elements, not only for its children.
-(//>) :: TagPred s a -> TreeParser s b -> TreeParser s [b]
-(//>) (TagPred p) q = TP $ \(Node t ts) -> case p t of
+(//>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) [b]
+(//>) (P p) q = P $ \(Node t ts) -> case p t of
     Nothing -> Nothing
     Just _  -> Just $ concatMap g ts
   where
-    g t = case runTP q t of
-        Nothing -> unJust $ runTP (any //> q) t
+    g t = case runP q t of
+        Nothing -> unJust $ runP (any //> q) t
         Just w  -> [w]
 infixr 2 //>
 
