@@ -2,7 +2,7 @@
 
 
 module Text.XML.PolySoup.Predicate
-( P (..)
+( Q (..)
 , any
 , satisfy
 ) where
@@ -18,27 +18,27 @@ import           Control.Applicative
 --
 -- It doesn't make sense to use `many` or `some` on the predicate.
 -- Point it out!
-newtype P a b = P { runP :: (a -> Maybe b) }
+newtype Q a b = Q { runQ :: (a -> Maybe b) }
 
-instance Functor (P a) where
-    fmap f (P g) = P $ fmap (fmap f) g
+instance Functor (Q a) where
+    fmap f (Q g) = Q $ fmap (fmap f) g
 
-instance Applicative (P a) where  
-    pure = P . const . Just
-    P f <*> P p = P $ \t -> f t <*> p t
+instance Applicative (Q a) where  
+    pure = Q . const . Just
+    Q f <*> Q p = Q $ \t -> f t <*> p t
 
-instance Alternative (P a) where
-    empty = P $ \_ -> Nothing
-    P p <|> P p' = P $ \t -> p t <|> p' t
+instance Alternative (Q a) where
+    empty = Q $ \_ -> Nothing
+    Q p <|> Q p' = Q $ \t -> p t <|> p' t
 
 
 -- | Predicate which is always satisfied.
-any :: P a a
-any = P Just
+any :: Q a a
+any = Q Just
 
 
 -- | Check if the given predicate is satisfied.
-satisfy :: (a -> Bool) -> P a a
-satisfy p = P $ \t -> if p t
+satisfy :: (a -> Bool) -> Q a a
+satisfy p = Q $ \t -> if p t
     then Just t
     else Nothing

@@ -10,7 +10,7 @@ module Text.XML.PolySoup.Tag
 , comment
 , warning
 , position
-, hasName
+, named
 , hasAttr
 , hasAttrVal
 
@@ -33,47 +33,47 @@ import           Text.XML.PolySoup.Predicate
 
 
 -- | Internal node (i.e., an opening tag).
-node :: P (Tag s) (Tag s)
+node :: Q (Tag s) (Tag s)
 node = satisfy isTagOpen
 
 
 -- | Leaf node (everything but an opening tag).
-leaf :: P (Tag s) (Tag s)
+leaf :: Q (Tag s) (Tag s)
 leaf = satisfy $ not . isTagOpen
 
 
 -- | A text node.
-text :: P (Tag s) (Tag s)
+text :: Q (Tag s) (Tag s)
 text = satisfy isTagText
 
 
 -- | A comment node.
-comment :: P (Tag s) (Tag s)
+comment :: Q (Tag s) (Tag s)
 comment = satisfy isTagComment
 
 
 -- | A warning node.
-warning :: P (Tag s) (Tag s)
+warning :: Q (Tag s) (Tag s)
 warning = satisfy isTagWarning
 
 
 -- | A position node.
-position :: P (Tag s) (Tag s)
+position :: Q (Tag s) (Tag s)
 position = satisfy isTagPosition
 
 
 -- | Does it have a given name?
-hasName :: Eq s => s -> P (Tag s) (Tag s)
-hasName x = satisfy $ justSatisfy (==x) . getName
+named :: Eq s => s -> Q (Tag s) (Tag s)
+named x = satisfy $ justSatisfy (==x) . getName
 
 
 -- | Does it have a given attribute?
-hasAttr :: Eq s => s -> P (Tag s) (Tag s)
+hasAttr :: Eq s => s -> Q (Tag s) (Tag s)
 hasAttr x = satisfy $ isJust . (lookup x <=< getAtts)
 
 
 -- | Does it have a given attribute with a given value?
-hasAttrVal :: Eq s => s -> s -> P (Tag s) (Tag s)
+hasAttrVal :: Eq s => s -> s -> Q (Tag s) (Tag s)
 hasAttrVal x y = satisfy $ justSatisfy (==y) . (lookup x <=< getAtts)
 
 
@@ -83,8 +83,8 @@ hasAttrVal x y = satisfy $ justSatisfy (==y) . (lookup x <=< getAtts)
 
 
 -- | Extract the tag name.
-name :: P (Tag s) s
-name = P getName
+name :: Q (Tag s) s
+name = Q getName
 
 
 ---------------------------------------------------------------------

@@ -10,9 +10,9 @@
 -- The second class contains more powerful combinators which can be used
 -- to parse the contents of an XML node in a generic way.  Note, that
 -- combinators from the two groups can be interleaved -- you can use
--- forest parser to construct a tree predicate, but you can also use
+-- a forest parser to construct a tree predicate, but you can also use
 -- a tree predicate as an elementary forest parser (see the
--- Text.XML.PolySoup.FParser module).
+-- "Text.XML.PolySoup.Parser" module).
 
 
 module Text.XML.PolySoup.Combine
@@ -27,10 +27,10 @@ module Text.XML.PolySoup.Combine
 , joinP
 , joinL
 , joinR
-, (>^>)
-, (<^>)
-, (^>)
-, (<^)
+-- , (>^>)
+-- , (<^>)
+-- , (^>)
+-- , (<^)
 ) where
 
 
@@ -41,7 +41,7 @@ import           Text.HTML.TagSoup (Tag)
 
 import           Text.XML.PolySoup.XmlTree
 import           Text.XML.PolySoup.Predicate
-import           Text.XML.PolySoup.FParser
+import           Text.XML.PolySoup.Parser
 
 
 ---------------------------------------------------------------------
@@ -55,38 +55,38 @@ import           Text.XML.PolySoup.FParser
 -- | Combine a tag predicate with an XML predicate.  The XML predicate can
 -- depend on the value of tag parser and will be called multiple times for
 -- tag children elements.
-(>/>) :: P (Tag s) a -> (a -> P (XmlTree s) b) -> P (XmlTree s) [b]
-(>/>) (P p) q = P $ \(Node t ts) -> case p t of
-    Just v  -> Just [w | Just w <- runP q' <$> ts] where q' = q v
+(>/>) :: Q (Tag s) a -> (a -> Q (XmlTree s) b) -> Q (XmlTree s) [b]
+(>/>) (Q p) q = Q $ \(Node t ts) -> case p t of
+    Just v  -> Just [w | Just w <- runQ q' <$> ts] where q' = q v
     Nothing -> Nothing
 infixr 2 >/>
 
 
 -- | Combine the tag parser with the XML parser.  The XML parser will
 -- be called multiple times for tag children elements.
-(</>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) (a, [b])
-(</>) (P p) q = P $ \(Node t ts) -> case p t of
-    Just v  -> Just (v, [w | Just w <- runP q <$> ts])
+(</>) :: Q (Tag s) a -> Q (XmlTree s) b -> Q (XmlTree s) (a, [b])
+(</>) (Q p) q = Q $ \(Node t ts) -> case p t of
+    Just v  -> Just (v, [w | Just w <- runQ q <$> ts])
     Nothing -> Nothing
 infixr 2 </>
 
 
 -- | Combine the tag parser with the XML parser.  The XML parser will
 -- be called multiple times for tag children elements.
-(/>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) [b]
+(/>) :: Q (Tag s) a -> Q (XmlTree s) b -> Q (XmlTree s) [b]
 (/>) p q = p >/> const q
 infixr 2 />
 
 
 -- | Similar to '/>' combinator but runs the XML parser for all
 -- descendant XML elements, not only for its children.
-(//>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) [b]
-(//>) (P p) q = P $ \(Node t ts) -> case p t of
+(//>) :: Q (Tag s) a -> Q (XmlTree s) b -> Q (XmlTree s) [b]
+(//>) (Q p) q = Q $ \(Node t ts) -> case p t of
     Just _  -> Just $ concatMap g ts
     Nothing -> Nothing
   where
-    g t = case runP q t of
-        Nothing -> unJust $ runP (any //> q) t
+    g t = case runQ q t of
+        Nothing -> unJust $ runQ (any //> q) t
         Just w  -> [w]
 infixr 2 //>
 
@@ -98,48 +98,49 @@ infixr 2 //>
 
 -- | Combine the tag predicate with the forest parser which will be used
 -- to parse contents of the tag element.
-join :: P (Tag s) a -> (a -> FParser s b) -> P (XmlTree s) b
-join (P p) q = P $ \(Node t ts) -> flip evalFP ts . q =<< p t
+join :: Q (Tag s) a -> (a -> P (XmlTree s) b) -> Q (XmlTree s) b
+join (Q p) q = Q $ \(Node t ts) -> flip evalP ts . q =<< p t
 
 
 -- | Combine the tag predicate with the forest parser which will be used
 -- to parse contents of the tag element.
-joinP :: P (Tag s) a -> FParser s b -> P (XmlTree s) (a, b)
+joinP :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) (a, b)
 joinP p q = join p $ \x -> (x,) <$> q
 
 
 -- | Combine the tag predicate with the orest parser which will be used
 -- to parse contents of the tag element.  Only results of the forest parser
 -- will be returned.
-joinR :: P (Tag s) a -> FParser s b -> P (XmlTree s) b
+joinR :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) b
 joinR p q = snd <$> joinP p q
+
 
 -- | Combine the tag predicate with the orest parser which will be used
 -- to parse contents of the tag element.  Only results of the tag predicate
 -- will be returned (the contents have to be successfully parsed, though).
-joinL :: P (Tag s) a -> FParser s b -> P (XmlTree s) a
+joinL :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) a
 joinL p q = fst <$> joinP p q
 
 
--- | Infix version of the join combinators.
-(>^>) :: P (Tag s) a -> (a -> FParser s b) -> P (XmlTree s) b
-(>^>) = join
-infixr 2 >^>
-
--- | Infix version of the joinP combinators.
-(<^>) :: P (Tag s) a -> FParser s b -> P (XmlTree s) (a, b)
-(<^>) = joinP
-infixr 2 <^>
-
--- | Infix version of the joinR combinators.
-(^>) :: P (Tag s) a -> FParser s b -> P (XmlTree s) b
-(^>) = joinR
-infixr 2 ^>
-
--- | Infix version of the joinL combinators.
-(<^) :: P (Tag s) a -> FParser s b -> P (XmlTree s) a
-(<^) = joinL
-infixr 2 <^
+-- -- | Infix version of the join combinators.
+-- (>^>) :: Q (Tag s) a -> (a -> P (XmlTree s) b) -> Q (XmlTree s) b
+-- (>^>) = join
+-- infixr 2 >^>
+-- 
+-- -- | Infix version of the joinP combinators.
+-- (<^>) :: Q (Tag s) a -> P (XmlTree s) b -> Q (XmlTree s) (a, b)
+-- (<^>) = joinP
+-- infixr 2 <^>
+-- 
+-- -- | Infix version of the joinR combinators.
+-- (^>) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) b
+-- (^>) = joinR
+-- infixr 2 ^>
+-- 
+-- -- | Infix version of the joinL combinators.
+-- (<^) :: P (Tag s) a -> P (XmlTree s) b -> P (XmlTree s) a
+-- (<^) = joinL
+-- infixr 2 <^
 
 
 
