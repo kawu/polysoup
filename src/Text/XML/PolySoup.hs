@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 
 
--- | The module re-exports sub-modules of the library:
+-- | The module re-exports individual submodules of the library:
 --
 --   * "Text.XML.PolySoup.XmlTree": defines XML tree and provides XML parsing
 --   and printing utilities, which can be used to transform between a tagsoup
