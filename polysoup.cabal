@@ -30,7 +30,7 @@ library
         Text.XML.PolySoup
       , Text.XML.PolySoup.XmlTree
       , Text.XML.PolySoup.Predicate
-      , Text.XML.PolySoup.Node
+      , Text.XML.PolySoup.Tag
       , Text.XML.PolySoup.FParser
       , Text.XML.PolySoup.Combine
 

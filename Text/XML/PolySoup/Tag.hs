@@ -1,7 +1,7 @@
--- | Predicates on XML tags (tree nodes).
+-- | Predicates on XML nodes (opening tags).
 
 
-module Text.XML.PolySoup.Node
+module Text.XML.PolySoup.Tag
 (
 -- * Core
   node
