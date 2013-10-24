@@ -1,0 +1,36 @@
+<p>
+  <s xml:id="1">
+    <tok>
+      <orth>Mały</orth>
+      <pos>adj</pos>
+    </tok>
+    <tok>
+      <orth>pies</orth>
+      <pos>subst</pos>
+    </tok>
+    <ns/>
+    <tok>
+      <orth>.</orth>
+      <pos>interp</pos>
+    </tok>
+  </s>
+  <s xml:id="2">
+    <tok>
+      <orth>Poszoł</orth>
+      <pos>verb</pos>
+    </tok>
+    <tok>
+      <orth>do</orth>
+      <pos>ign</pos>
+    </tok>
+    <tok>
+      <orth>domu</orth>
+      <pos>subst</pos>
+    </tok>
+    <ns/>
+    <tok>
+      <orth>.</orth>
+      <pos>interp</pos>
+    </tok>
+  </s>
+</p>
