@@ -73,7 +73,7 @@ first :: Q a b -> P a b
 first (Q p) = P $ go [] where
     go acc (t:ts) = case p t of
         Just v  -> Just (v, reverse acc ++ ts)
-        Nothing -> go (t:ts) ts
+        Nothing -> go (t:acc) ts
     go _ [] = Nothing
 
 
