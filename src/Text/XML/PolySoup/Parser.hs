@@ -20,6 +20,11 @@ module Text.XML.PolySoup.Parser
 , every
 -- ** Sequential
 , pop
+-- ** Peek
+, peek
+, spy
+-- ** Utilities
+, many_
 ) where
 
 
@@ -98,3 +103,38 @@ pop :: Q a b -> P a b
 pop (Q p) = P $ \tts -> case tts of
     (t:ts)  -> (,ts) <$> p t
     []      -> Nothing
+
+
+---------------------------------------------------------------------
+-- Peek
+---------------------------------------------------------------------
+
+
+-- | Like `pop`, but doesn't consume the tree.
+peek :: Q a b -> P a b
+peek (Q p) = P $ \tts -> case tts of
+    (t:_)   -> (,tts) <$> p t
+    []      -> Nothing
+
+
+-- | Like `first`, but doesn't consume the tree.
+spy :: Q a b -> P a b
+spy (Q p) = P $ \tts ->
+    let go (t:ts) = case p t of
+            Just v  -> Just (v, tts)
+            Nothing -> go ts
+        go [] = Nothing
+    in  go tts
+
+
+---------------------------------------------------------------------
+-- Utilities
+---------------------------------------------------------------------
+
+
+-- | Many combinator which ignores parsing results.
+many_ :: Alternative f => f a -> f ()
+many_ v = many_v
+  where
+    many_v = some_v <|> pure ()
+    some_v = v *> many_v
