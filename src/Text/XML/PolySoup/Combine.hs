@@ -52,9 +52,12 @@ import           Text.XML.PolySoup.Parser
 ---------------------------------------------------------------------
 
 
--- | Make a tree-level predicate from a tag-level predicate.
+-- TODO: Consider using the Query typeclass and add the comment
+-- below to the `node` function.
 -- Note, that in most cases you won't need this function, you
 -- can make use of the `Query` typeclass.
+
+-- | Make a tree-level predicate from a tag-level predicate.
 node :: Q (Tag s) a -> Q (XmlTree s) a
 node (Q p) = Q $ \(Node t _) -> p t
 

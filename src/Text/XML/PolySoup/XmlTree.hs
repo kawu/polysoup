@@ -24,6 +24,7 @@ module Text.XML.PolySoup.XmlTree
 
 
 import           Data.Tree
+import           Text.StringLike
 import qualified Text.HTML.TagSoup as S
 import           Text.ParserCombinators.Poly.Lazy
 
@@ -56,24 +57,25 @@ type XmlForest s = [XmlTree s]
 
 
 -- | Parse XML tree from a list of tags.
-parseTree :: Eq s => [S.Tag s] -> XmlTree s
+parseTree :: StringLike s => [S.Tag s] -> XmlTree s
 parseTree = fst . runParser xmlTreeP
 
 
 -- | Parse XML forest from a list of tags.  Note, that if the XML file
 -- has additional headers, the `parseForest` function has to be used to
--- parse it correctly.
-parseForest :: Eq s => [S.Tag s] -> XmlForest s
+-- parse it correctly.  Headers will not be present in the result, while
+-- top-level comments will.
+parseForest :: StringLike s => [S.Tag s] -> XmlForest s
 parseForest = fst . runParser (many xmlTreeP)
 
 
 -- | A parser from tags to an XML tree.
-xmlTreeP :: Eq s => XmlParser s (XmlTree s)
-xmlTreeP = nodeP <|> leafP
+xmlTreeP :: StringLike s => XmlParser s (XmlTree s)
+xmlTreeP = leafP <|> nodeP
 
 
 -- | Internal node parser.
-nodeP :: Eq s => XmlParser s (XmlTree s)
+nodeP :: StringLike s => XmlParser s (XmlTree s)
 nodeP = do
     x <- satisfy S.isTagOpen
     x `seq` Node x <$> many xmlTreeP
@@ -84,11 +86,15 @@ nodeP = do
 
 
 -- | Leaf node parser.
-leafP :: XmlParser s (XmlTree s)
+leafP :: StringLike s => XmlParser s (XmlTree s)
 leafP = fmap
     (flip Node [])
-    (satisfy $ \x ->
-        not (S.isTagOpen x || S.isTagClose x))
+    (satisfy $ \x -> not (isTagOpen x || S.isTagClose x))
+  where
+    isTagOpen (S.TagOpen xs _) = case uncons xs of
+        Just (x, _) -> x /= '!' && x /= '?'
+        Nothing     -> True
+    isTagOpen _ = False
     
 
 ---------------------------------------------------------------------
