@@ -15,9 +15,10 @@ module Text.XML.PolySoup.Parser
 
 -- * Parsing
 -- ** Selective
-, find
+-- , find
 , first
 , every
+, every'
 -- ** Sequential
 , pop
 -- ** Peek
@@ -30,6 +31,7 @@ module Text.XML.PolySoup.Parser
 
 import           Control.Applicative
 import qualified Control.Arrow as Arr
+import           Data.Maybe (catMaybes)
 
 import           Text.XML.PolySoup.Predicate
 
@@ -68,9 +70,9 @@ evalP p = fmap fst . runP p
 ---------------------------------------------------------------------
 
 
--- | A synonym to `first`.
-find :: Q a b -> P a b
-find = first
+-- -- | A synonym to `first`.
+-- find :: Q a b -> P a b
+-- find = first
 
 
 -- | Find the first tree satisfying the given predicate.
@@ -91,6 +93,14 @@ every (Q p) =
     upd (vs, acc) t = case p t of
         Just v  -> (v:vs, acc)
         Nothing -> (vs, t:acc)
+
+
+-- | A lazy version of `every` which "forgets" non-matching subtrees
+-- along the way.
+every' :: Q a b -> P a [b]
+every' (Q p) =
+    let prep xs = Just (xs, [])
+    in  P $ prep . catMaybes . map p
 
 
 ---------------------------------------------------------------------

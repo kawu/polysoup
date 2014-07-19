@@ -23,6 +23,7 @@ module Text.XML.PolySoup.XmlTree
 ) where
 
 
+import           Control.DeepSeq (NFData, deepseq)
 import           Data.Tree
 import           Text.StringLike
 import qualified Text.HTML.TagSoup as S
@@ -57,41 +58,49 @@ type XmlForest s = [XmlTree s]
 
 
 -- | Parse XML tree from a list of tags.
-parseTree :: StringLike s => [S.Tag s] -> XmlTree s
+parseTree :: (NFData s, StringLike s) => [S.Tag s] -> XmlTree s
 parseTree = fst . runParser xmlTreeP
 
 
 -- | Parse XML forest from a list of tags.  Note, that if the XML file
 -- has additional headers, the `parseForest` function has to be used to
--- parse it correctly.  Headers will not be present in the result, while
--- top-level comments will.
-parseForest :: StringLike s => [S.Tag s] -> XmlForest s
+-- parse it correctly.
+parseForest :: (NFData s, StringLike s) => [S.Tag s] -> XmlForest s
 parseForest = fst . runParser (many xmlTreeP)
 
 
 -- | A parser from tags to an XML tree.
-xmlTreeP :: StringLike s => XmlParser s (XmlTree s)
+xmlTreeP :: (NFData s, StringLike s) => XmlParser s (XmlTree s)
 xmlTreeP = leafP <|> nodeP
+-- xmlTreeP = nodeP <|> leafP
 
 
 -- | Internal node parser.
-nodeP :: StringLike s => XmlParser s (XmlTree s)
+nodeP :: (NFData s, StringLike s) => XmlParser s (XmlTree s)
 nodeP = do
     x <- satisfy S.isTagOpen
-    x `seq` Node x <$> many xmlTreeP
+    x `tagOpenSeq` Node x <$> many xmlTreeP
         <* satisfy (S.isTagCloseName $ tagName x)
   where
     tagName (S.TagOpen x _) = x
     tagName _ = error "tagName: not an open tag"
+    -- Without `deepseq` even the simple `renderForest . parseForest` leads
+    -- to a memory leak.  Tested multiple times w.r.t. tagsoup-0.13.1.
+    tagOpenSeq (S.TagOpen x xs) = deepseq (x, xs)
+    tagOpenSeq _ = id
 
 
 -- | Leaf node parser.
-leafP :: StringLike s => XmlParser s (XmlTree s)
+leafP :: (NFData s, StringLike s) => XmlParser s (XmlTree s)
 leafP = fmap
     (flip Node [])
+--     (satisfy $ \x -> not (S.isTagOpen x || S.isTagClose x))
     (satisfy $ \x -> not (isTagOpen x || S.isTagClose x))
   where
     isTagOpen (S.TagOpen xs _) = case uncons xs of
+        -- Headers (e.g. <?xml ...> and <!CDATA ...>) do not have
+        -- corresponding closing tags, therefore have to be treated
+        -- as leaves.
         Just (x, _) -> x /= '!' && x /= '?'
         Nothing     -> True
     isTagOpen _ = False
