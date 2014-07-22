@@ -58,7 +58,7 @@ getText :: Tag s -> Maybe s
 getText = maybeTagText
 
 
--- | Get name of the tag.
+-- | Get the list of the attributes.
 getAtts :: Tag s -> Maybe [(s, s)]
 getAtts (TagOpen _ x)   = Just x
 getAtts _               = Nothing
