@@ -154,7 +154,7 @@ justSatisfy :: (a -> Bool) -> Maybe a -> Bool
 justSatisfy = maybe False
 
 
--- | Test if a tag is a comment.
-isTagComment :: Tag s -> Bool
-isTagComment (TagComment _) = True
-isTagComment _ = False
+-- -- | Test if a tag is a comment.
+-- isTagComment :: Tag s -> Bool
+-- isTagComment (TagComment _) = True
+-- isTagComment _ = False
