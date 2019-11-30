@@ -1,0 +1,28 @@
+name:                polysoup
+version:             0.2.1
+github:              "kawu/polysoup"
+license:             BSD3
+author:              "Jakub Waszczuk"
+maintainer:          "waszczuk.kuba@gmail.com"
+copyright:           "2012-2019 IPI PAN, Jakub Waszczuk"
+
+extra-source-files:
+- README.md
+# - ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            Online XML parsing with polyparse and tagsoup
+category:            XML
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/kawu/polysoup#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- tagsoup >= 0.13 && < 0.15
+- polyparse >= 1.9 && < 1.13
+
+library:
+  source-dirs: src
